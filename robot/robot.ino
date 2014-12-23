@@ -16,9 +16,12 @@
 #define servo2Home 90
 
 #define ch1pin 2 
+#define ch1maxval 5
 #define ch2pin 3
+#define ch2maxval 5
 #define ch3pin 4
 #define ch4pin 5
+#define ch4maxval 10
 #define ch5pin 6
 #define ch6pin 7
 #define servo1pin 9
@@ -90,6 +93,8 @@ boolean fullStop = true;
 void loop() {
   doDelay = false;
 
+delay(150);
+
   ch1 = pulseIn(ch1pin,HIGH,25000);
   ch2 = pulseIn(ch2pin,HIGH,25000);
   ch3 = pulseIn(ch3pin,HIGH,25000);
@@ -97,34 +102,46 @@ void loop() {
   ch5 = pulseIn(ch5pin,HIGH,25000);
   ch6 = pulseIn(ch6pin,HIGH,25000);
 
-  ch1val = map(ch1,1100,1920,-10,10); // camera left/rigt
-  ch2val = map(ch2,1100,1920,-10,10); // camera up/down
+  ch1val = map(ch1,1100,1920,-ch1maxval,ch1maxval+1); // camera left/rigt
+  ch2val = map(ch2,1100,1920,-ch2maxval,ch2maxval+1); // camera up/down
 
-  ch3val = map(ch3,1100,1920,0,maxSpeed); 
+  ch3val = map(ch3,1200,1850,-10,maxSpeed); 
   if (ch3val < 0) ch3val = 0;
-  if (ch3val > 255) ch3val = 255;
-
-  ch4val = map(ch4,1100,1920,-50,50); // turn
-  if (ch4val < -90) ch4val = -50;
-  if (ch4val >  90) ch4val =  50;
-
-  ch5val = map(ch5,900,2100,BACKWARD,FORWARD);  // forward, backward
+  if (ch3val > maxSpeed) ch3val = maxSpeed;
+  ch3val = 255 - ch3val;
+  
+  ch4val = map(ch4,1000,2000,-ch4maxval,ch4maxval+1); // turn
+  if (ch4val < -10) ch4val = -10;
+  if (ch4val >  10) ch4val =  10;
+  
+  if(ch5 > 1500) { // forward, backward
+    ch5val = BACKWARD;
+  } else {
+    ch5val = FORWARD;
+  }
+  
+  if(ch6 > 1500) { // forward, backward
+    ch6val = -1;
+  } else {
+    ch6val = 1;
+  }
+  
+  //ch5val = map(ch5,1000,1900,FORWARD,BACKWARD);  
  
   //ch6val = map(ch6,1100,1920,-1,1); // mode select
-  ch6val = 1;
 
   // debug start //
-  Serial.print(ch1);
+  Serial.print(ch1val);
   Serial.print(" ");
-  Serial.print(ch2);
+  Serial.print(ch2val);
+  Serial.print("     ");
+  Serial.print(ch3val);
+  Serial.print("     ");
+  Serial.print(ch4val);
+  Serial.print("     ");
+  Serial.print(ch5val);
   Serial.print(" ");
-  Serial.print(ch3);
-  Serial.print(" ");
-  Serial.print(ch4);
-  Serial.print(" ");
-  Serial.print(ch5);
-  Serial.print(" ");
-  Serial.println(ch6);
+  Serial.println(ch6val);
   // debug end //
   
   // robot forward, backward + gear
@@ -148,8 +165,8 @@ void loop() {
       way = FORWARD;
       noway = BACKWARD;
     } else {
-      way = FORWARD;
-      noway = BACKWARD;    
+      way = BACKWARD;
+      noway = FORWARD;    
     }
   }
   
@@ -200,11 +217,11 @@ void loop() {
   
   } else {  // setupmode on
 
-    if (ch1val == -10) {  // camera to home
+    if (ch1val == -ch1maxval) {  // camera to home
        servo1.write(servo1Home);
        servo2.write(servo2Home);
        doDelay = true;
-     } else if (ch1val == 10) {   // lights on/off
+     } else if (ch1val == ch1maxval) {   // lights on/off
        if (lightsOn) {
          lightsOn = false;
          digitalWrite(lightsPin,LOW);
@@ -212,8 +229,8 @@ void loop() {
          lightsOn = true;
          digitalWrite(lightsPin,HIGH);
        }
-     } else if (ch2val == -10) {
-     } else if (ch2val == 10) {
+     } else if (ch2val == -ch2maxval) {
+     } else if (ch2val == ch2maxval) {
      }
    }
   
@@ -228,6 +245,7 @@ void loop() {
 void turn (int val) 
 {
   if (val > 0) { //right
+    val = abs(val)*10;
     if (fullStop) {
       motor1->run(way);
       motor2->run(way);
@@ -246,10 +264,11 @@ void turn (int val)
         motor3->run(way);
         motor4->run(way);
       }
-      motor3->setSpeed(turnVal);
-      motor4->setSpeed(turnVal);
+      motor3->setSpeed(abs(turnVal));
+      motor4->setSpeed(abs(turnVal));
     }
   } else {  // left
+    val = abs(val)*10;
     if (fullStop) {
       motor1->run(noway);
       motor2->run(noway);
@@ -260,7 +279,7 @@ void turn (int val)
       motor3->setSpeed(val);
       motor4->setSpeed(val);
     } else {
-      int turnVal = ch3val-val;
+      int turnVal = ch3val-abs(val);
       if (turnVal < 0) {
         motor1->run(noway);
         motor2->run(noway);
@@ -268,8 +287,8 @@ void turn (int val)
         motor1->run(way);
         motor2->run(way);
       }
-      motor1->setSpeed(turnVal);
-      motor2->setSpeed(turnVal);
+      motor1->setSpeed(abs(turnVal));
+      motor2->setSpeed(abs(turnVal));
     }  }
 }
 
