@@ -6,7 +6,7 @@
 #include <Adafruit_MotorShield.h>
 #include "utility/Adafruit_PWMServoDriver.h"
 
-#define maxSpeed 255
+#define maxSpeed 200
 
 #define minServo1 10
 #define maxServo1 169
@@ -91,9 +91,8 @@ boolean fullStop = true;
 
 // the loop function runs over and over again forever
 void loop() {
-  doDelay = false;
 
-delay(150);
+  delay(150);
 
   ch1 = pulseIn(ch1pin,HIGH,25000);
   ch2 = pulseIn(ch2pin,HIGH,25000);
@@ -171,7 +170,7 @@ delay(150);
   }
   
   // robot turning
- turn(ch4val);
+  turn(ch4val);
 
   if (ch6val > 0) {  // camera mode on
   
@@ -183,7 +182,6 @@ delay(150);
       } else {
         servo1.write(servo1val+ch1val);
       }
-      doDelay = true;
     } 
     if (ch1val < 0) {
       int servo1val = servo1.read();
@@ -192,7 +190,6 @@ delay(150);
       } else {
         servo1.write(servo1val-ch1val);
       }  
-      doDelay = true;
     } 
   
     // camera up/down
@@ -203,7 +200,6 @@ delay(150);
       } else {
         servo2.write(servo2val+ch2val);
       }
-      doDelay = true;
     } 
     if (ch2val < 0) {
       int servo2val = servo2.read();
@@ -212,7 +208,6 @@ delay(150);
       } else {
         servo2.write(servo2val-ch2val);
       }  
-      doDelay = true;
     } 
   
   } else {  // setupmode on
@@ -220,27 +215,21 @@ delay(150);
     if (ch1val == -ch1maxval) {  // camera to home
        servo1.write(servo1Home);
        servo2.write(servo2Home);
-       doDelay = true;
-     } else if (ch1val == ch1maxval) {   // lights on/off
-       if (lightsOn) {
-         lightsOn = false;
-         digitalWrite(lightsPin,LOW);
-       } else {
-         lightsOn = true;
-         digitalWrite(lightsPin,HIGH);
-       }
-     } else if (ch2val == -ch2maxval) {
-     } else if (ch2val == ch2maxval) {
-     }
-   }
-  
-  
-  // delay for servos
-  if (doDelay) {
-    delay(15);  
+    } else if (ch1val == ch1maxval) {   // lights on/off
+      if (lightsOn) {
+        lightsOn = false;
+        digitalWrite(lightsPin,LOW);
+      } else {
+        lightsOn = true;
+        digitalWrite(lightsPin,HIGH);
+      }
+    } else if (ch2val == -ch2maxval) {
+      //tba 
+    } else if (ch2val == ch2maxval) {
+      //tba 
+    }
   }
- 
- }
+}
 
 void turn (int val) 
 {
@@ -279,7 +268,7 @@ void turn (int val)
       motor3->setSpeed(val);
       motor4->setSpeed(val);
     } else {
-      int turnVal = ch3val-abs(val);
+      int turnVal = ch3val-val;
       if (turnVal < 0) {
         motor1->run(noway);
         motor2->run(noway);
