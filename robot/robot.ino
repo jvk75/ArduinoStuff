@@ -8,12 +8,12 @@
 
 #define maxSpeed 200
 
-#define minServo1 10
-#define maxServo1 169
-#define minServo2 30
+#define minServo1 20
+#define maxServo1 159
+#define minServo2 72
 #define maxServo2 169
-#define servo1Home 90
-#define servo2Home 90
+#define servo1Home 100
+#define servo2Home 100
 
 #define ch1pin 2 
 #define ch1maxval 5
@@ -57,7 +57,7 @@ void setup() {
   pinMode(ch5pin,INPUT);
   pinMode(ch6pin,INPUT);
 
-  servo1.attach(servo2pin);
+  servo1.attach(servo1pin);
   servo1.write(servo1Home);
 
   servo2.attach(servo2pin);
@@ -86,13 +86,14 @@ int way = RELEASE;
 int noway = RELEASE;
 boolean doDelay = false;
 boolean lightsOn = false;
+boolean lightsCanToggle = true;
 boolean fullStop = true;
 
 
 // the loop function runs over and over again forever
 void loop() {
 
-  delay(150);
+  delay(100);
 
   ch1 = pulseIn(ch1pin,HIGH,25000);
   ch2 = pulseIn(ch2pin,HIGH,25000);
@@ -104,10 +105,10 @@ void loop() {
   ch1val = map(ch1,1100,1920,-ch1maxval,ch1maxval+1); // camera left/rigt
   ch2val = map(ch2,1100,1920,-ch2maxval,ch2maxval+1); // camera up/down
 
-  ch3val = map(ch3,1200,1850,-10,maxSpeed); 
+  ch3val = map(ch3,1300,1850,-10,maxSpeed); 
   if (ch3val < 0) ch3val = 0;
   if (ch3val > maxSpeed) ch3val = maxSpeed;
-  ch3val = 255 - ch3val;
+  ch3val = maxSpeed - ch3val;
   
   ch4val = map(ch4,1000,2000,-ch4maxval,ch4maxval+1); // turn
   if (ch4val < -10) ch4val = -10;
@@ -130,17 +131,21 @@ void loop() {
   //ch6val = map(ch6,1100,1920,-1,1); // mode select
 
   // debug start //
-  Serial.print(ch1val);
-  Serial.print(" ");
-  Serial.print(ch2val);
-  Serial.print("     ");
-  Serial.print(ch3val);
-  Serial.print("     ");
-  Serial.print(ch4val);
-  Serial.print("     ");
-  Serial.print(ch5val);
-  Serial.print(" ");
-  Serial.println(ch6val);
+//  Serial.print(ch1val);
+//  Serial.print(" ");
+//  Serial.print(ch2val);
+//  Serial.print("     ");
+//  Serial.print(ch3val);
+//  Serial.print("     ");
+//  Serial.print(ch4val);
+//  Serial.print("     ");
+//  Serial.print(ch5val);
+//  Serial.print(" ");
+//  Serial.print(ch6val);
+//  Serial.print(" ");
+//  Serial.print(servo1.read());
+//  Serial.print(" ");
+//  Serial.println(servo2.read());
   // debug end //
   
   // robot forward, backward + gear
@@ -175,58 +180,64 @@ void loop() {
   if (ch6val > 0) {  // camera mode on
   
     // camera left/right
-    if (ch1val > 0) {
-      int servo1val = servo1.read();
-      if (servo1val+ch1val > maxServo1) {
-        servo1.write(maxServo1);
-      } else {
-        servo1.write(servo1val+ch1val);
-      }
-    } 
     if (ch1val < 0) {
       int servo1val = servo1.read();
-      if (servo1val-ch1val < minServo1) {
-        servo1.write(minServo1);
+      if (servo1val+ch1val > maxServo1) {
+        servo1.write(servo1val);
       } else {
-        servo1.write(servo1val-ch1val);
+        servo1.write(servo1val+abs(ch1val));
+      }
+    } 
+    if (ch1val > 0) {
+      int servo1val = servo1.read();
+      if (servo1val-ch1val < minServo1) {
+        servo1.write(servo1val);
+      } else {
+        servo1.write(servo1val-abs(ch1val));
       }  
     } 
   
     // camera up/down
-    if (ch2val > 0) {
-      int servo2val = servo2.read();
-      if (servo2val+ch2val > maxServo2) {
-        servo2.write(maxServo2);
-      } else {
-        servo2.write(servo2val+ch2val);
-      }
-    } 
     if (ch2val < 0) {
       int servo2val = servo2.read();
-      if (servo2val-ch1val < minServo2) {
-        servo2.write(minServo2);
+      if (servo2val+ch2val > maxServo2) {
+        servo2.write(servo2val);
       } else {
-        servo2.write(servo2val-ch2val);
+        servo2.write(servo2val+abs(ch2val));
+      }
+    } 
+    if (ch2val > 0) {
+      int servo2val = servo2.read();
+      if (servo2val-ch1val < minServo2) {
+        servo2.write(servo2val);
+      } else {
+        servo2.write(servo2val-abs(ch2val));
       }  
     } 
   
   } else {  // setupmode on
 
-    if (ch1val == -ch1maxval) {  // camera to home
+    if (ch2val == -ch2maxval) {  // camera to home
        servo1.write(servo1Home);
        servo2.write(servo2Home);
-    } else if (ch1val == ch1maxval) {   // lights on/off
-      if (lightsOn) {
-        lightsOn = false;
-        digitalWrite(lightsPin,LOW);
-      } else {
-        lightsOn = true;
-        digitalWrite(lightsPin,HIGH);
+    } else if (ch2val == ch2maxval) {   // lights on/off
+      if (lightsCanToggle) {
+        if (lightsOn) {
+          lightsCanToggle = false;
+          lightsOn = false;
+          digitalWrite(lightsPin,LOW);
+        } else {
+          lightsCanToggle = false;
+          lightsOn = true;
+          digitalWrite(lightsPin,HIGH);
+        }
       }
-    } else if (ch2val == -ch2maxval) {
+    } else if (ch1val == -ch1maxval) {
       //tba 
-    } else if (ch2val == ch2maxval) {
+    } else if (ch1val == ch1maxval) {
       //tba 
+    } else {
+      lightsCanToggle = true;
     }
   }
 }
