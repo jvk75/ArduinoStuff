@@ -7,10 +7,14 @@
 #include <SoftwareSerial.h>
 #include <dht.h>
 
+//uncomment if wifi in use
+//#define WIFI 
+
 // pins
 #define waterTempPin 12
 #define airTempHumidPin 10
 #define relayPin 4
+#define wifiReadyLed 13
 #define wifiReadyPin A1
 #define wifiTxPin 8
 #define wifiRxPin 9
@@ -22,9 +26,13 @@
 #define airHumidCalibration 0.0
 
 //limits
-#define waterHighLimit 30
-#define waterLowLimit 24
+#define waterHighLimit 0
+#define waterLowLimit 0
 
+#define timeLowLimit 1
+#define timeMaxLimit 45
+
+#define aDay 86400
 
 // definitions
 OneWire waterTempOneWire(waterTempPin);
@@ -40,8 +48,10 @@ void setup(void)
   wifiSerial.begin(115200);
   
   pinMode(relayPin,OUTPUT);
+  pinMode(wifiReadyLed,OUTPUT);
 
   digitalWrite(relayPin,LOW);
+  digitalWrite(wifiReadyLed,LOW);
   
   // Start up the dallaslibrary
   waterTemp.begin();
@@ -52,22 +62,51 @@ void setup(void)
 }
 
 bool isConnect = false;
+unsigned long previousMillis = 0;        
+int relayState = LOW;
+long relayDelay = 1;
+int potDelay = 0;
 
 void loop(void)
 { 
-  waitReadyPin(wifiReadyPin);
+  unsigned long currentMillis = millis();
+   
+  if(currentMillis - previousMillis >= relayDelay) {
+    potDelay = map(analogRead(potPin),0,1023,timeLowLimit,timeMaxLimit);
+    Serial.print("pd: ");
+    Serial.println(potDelay);
   
+ 
+    previousMillis = currentMillis;   
+    if (relayState == LOW) {
+      relayState = HIGH;
+      relayDelay = potDelay*1000;
+    } else {
+      relayState = LOW;
+      relayDelay = aDay*1000;
+    }
+    digitalWrite(relayPin, relayState);
+    Serial.println(relayDelay);
+  }
+
+ 
+#ifndef WIFI
+    delay(100);
+#else
   if (!isConnect) {
+    waitReadyPin(wifiReadyPin);
+    //sendToWifi("connect Arduino:teeseite");
     sendToWifi("connect Arduino:teeseite");
     waitReadyPin(wifiReadyPin);
 
-    sendToWifi("privatekey rzemWDaYXeFyBm1l04Gz");
+    sendToWifi("privatekey Ww5KbXEVPVf80xZpYWA5");
     waitReadyPin(wifiReadyPin);
 
-    sendToWifi("publickey AJrago6ADrf6AZRr0Wa1");
+    sendToWifi("publickey 6Jqr16OdNdHb0JGZV2Xx");
     waitReadyPin(wifiReadyPin);
     
     isConnect = true;
+    digitalWrite(wifiReadyLed, HIGH);
   } else {
     waitReadyPin(wifiReadyPin);
     
@@ -83,9 +122,7 @@ void loop(void)
       at = 0;
       ah = 0;
     }
-    
-    checkRelay(wt);
-    
+       
     String data = "data ";
     data += "\"airtemp\":\"";
     data += at;
@@ -96,31 +133,32 @@ void loop(void)
     data += "\",\"relay\":\"";
     data += digitalRead(relayPin) ? 10 : 0;
     data += "\",\"relay_high\":\"";
-    data += waterHighLimit;
+    data += potDelay;
     data += "\",\"relay_low\":\"";
     data += waterLowLimit;
     data += "\"";
     
     sendToWifi(data);
 
-    delay(15000);
+    delay(5000);
   }
+#endif
 }
 
 void checkRelay(float wt)
 {
-  if (wt > waterHighLimit && digitalRead(relayPin) == HIGH) {
+  /*if (wt > waterHighLimit && digitalRead(relayPin) == HIGH) {
     digitalWrite(relayPin,LOW);
   } else if (wt < waterLowLimit && digitalRead(relayPin) == LOW) {
     digitalWrite(relayPin,HIGH);
-  }
+  }*/
 }
 
 void sendToWifi(String str)
 {
   Serial.println(str);
   wifiSerial.println(str);
-  delay(1000);  
+  delay(1000);
 }
 
 void waitWifiSerial() 
@@ -135,6 +173,9 @@ void waitWifiSerial()
 
 void waitReadyPin(int pin)
 {
-  while(analogRead(pin) < 900) {delay(100);  /*Serial.println("Waiting readyPin");*/}
+  while(analogRead(pin) < 900) {
+    delay(500);  
+    Serial.println("Waiting readyPin");
+  }
 }
 
